@@ -3,5 +3,5 @@
 public record ProductDto(
     long Id,
     string Name,
-    string Quantity,
-    decimal Price);
+    long Quantity,
+    double Price);

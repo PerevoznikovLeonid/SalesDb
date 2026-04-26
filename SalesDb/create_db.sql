@@ -42,7 +42,7 @@ CREATE TABLE table_persons(
 CREATE TABLE table_sales(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,
-    seller_id INTEGER NOTа NULL,
+    seller_id INTEGER NOT NULL,
     customer_id INTEGER NOT NULL,
     date TEXT NOT NULL,
     FOREIGN KEY (product_id) REFERENCES table_products(id)

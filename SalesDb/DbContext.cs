@@ -7,29 +7,36 @@ namespace SalesDb;
 
 public class DbContext(string connectionString)
 {
-    private readonly SqliteConnection _db = new(connectionString);
+    private readonly string _connectionString = connectionString;
     
     public IEnumerable<ProductDto> GetStock()
     {
-        _db.Open();
-        var products = _db.Query<ProductDto>(
+        using var db = new SqliteConnection(_connectionString);
+        db.Open();
+        var products = db.Query<ProductDto>(
             "SELECT * FROM view_stock"
         );
-        _db.Close();
+        db.Close();
         
         return products;
     }
     
     public ProductDto? GetProductById(int id)
     {
-        return _db.QuerySingleOrDefault<ProductDto>(
+        using var db = new SqliteConnection(_connectionString);
+        db.Open();
+        var result = db.QuerySingleOrDefault<ProductDto>(
             "SELECT id, name, quantity, price FROM table_products WHERE id = @id",
             new { id });
+        db.Close();
+        return result;
     }
     
     public PersonDto? GetPersonById(int id)
     {
-        return _db.QuerySingleOrDefault<PersonDto>(
+        using var db = new SqliteConnection(_connectionString); 
+        db.Open();
+        var result = db.QuerySingleOrDefault<PersonDto>(
             """
             SELECT p.id,
                    p.first_name AS FirstName,
@@ -39,42 +46,45 @@ public class DbContext(string connectionString)
                    em.email AS Email,
                    p.address AS Address
                    FROM table_persons p
-                   JOIN table_phone_numbers pn ON p.phone_number_id = pn.id
-                   JOIN table_emails em ON p.email_id = em.id
+                   LEFT JOIN table_phone_numbers pn ON p.phone_number_id = pn.id
+                   LEFT JOIN table_emails em ON p.email_id = em.id
                    WHERE p.id = @id
             """,
             new { id });
+        db.Close();
+        return result;
     }
     
-    public bool TrySellProduct(ProductDto product, PersonDto seller, PersonDto customer,
+    public bool SellProduct(ProductDto product, PersonDto seller, PersonDto customer,
         out string? errorMessage)
     {
         errorMessage = null;
-        _db.Open();
-        using var transaction = _db.BeginTransaction();
+        using var db = new SqliteConnection(_connectionString);
+        db.Open();
+        using var transaction = db.BeginTransaction();
         try
         {
-            var sellerExists = _db.ExecuteScalar<bool>(
+            var sellerExists = db.ExecuteScalar<bool>(
                 "SELECT COUNT(*) FROM table_persons WHERE id = @id",
                 new { id = seller.Id }, transaction);
             if (!sellerExists)
             {
                 errorMessage = $"Продавец с ID {seller.Id} не найден.";
-                _db.Close();
+                db.Close();
                 return false;
             }
 
-            var customerExists = _db.ExecuteScalar<bool>(
+            var customerExists = db.ExecuteScalar<bool>(
                 "SELECT COUNT(*) FROM table_persons WHERE id = @id",
                 new { id = customer.Id }, transaction);
             if (!customerExists)
             {
                 errorMessage = $"Покупатель с ID {customer.Id} не найден.";
-                _db.Close();
+                db.Close();
                 return false;
             }
 
-            _db.Execute(
+            db.Execute(
                 """
                 INSERT INTO table_sales (product_id, seller_id, customer_id, date)
                                   VALUES (@prodId, @sellerId, @custId, @date)
@@ -94,13 +104,13 @@ public class DbContext(string connectionString)
         }
         catch (SqliteException ex)
         {
-            _db.Close();
+            db.Close();
             errorMessage = $"Ошибка базы данных: {ex.Message}";
             return false;
         }
         catch (Exception ex)
         {
-            _db.Close();
+            db.Close();
             errorMessage = $"Неизвестная ошибка: {ex.Message}";
             return false;
         }
