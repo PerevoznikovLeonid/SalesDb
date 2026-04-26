@@ -26,8 +26,7 @@ public class DbContext(string connectionString)
             "SELECT id, name, quantity, price FROM table_products WHERE id = @id",
             new { id });
     }
-
-    /// <summary>Возвращает персону (с контактами) по ID или null.</summary>
+    
     public PersonDto? GetPersonById(int id)
     {
         return _db.QuerySingleOrDefault<PersonDto>(
