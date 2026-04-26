@@ -1,3 +1,13 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using System;
+using SalesDb;
 
-Console.WriteLine("Hello, World!");
+const string connectionString = @"Data Source=C:\Users\User\RiderProjects\SalesDb\SalesDb\sales.db;";
+
+var dbContext = new DbContext(connectionString);
+
+Console.WriteLine("Начальные остатки:");
+var stock = dbContext.GetStock();
+foreach (var productDto in stock)
+{
+    Console.WriteLine(productDto);
+}
